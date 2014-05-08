@@ -85,6 +85,8 @@ extern PFNGLBLITFRAMEBUFFERPROC glBlitFramebuffer;
 extern PFNGLGETUNIFORMBLOCKINDEXPROC glGetUniformBlockIndex;
 extern PFNGLUNIFORMBLOCKBINDINGPROC glUniformBlockBinding;
 extern PFNGLBLENDCOLORPROC glBlendColor;
+extern PFNGLCOMPRESSEDTEXIMAGE2DPROC glCompressedTexImage2D;
+extern PFNGLGETCOMPRESSEDTEXIMAGEPROC glGetCompressedTexImage;
 #ifdef DEBUG
 extern PFNGLDEBUGMESSAGECALLBACKARBPROC glDebugMessageCallbackARB;
 #endif
@@ -153,13 +155,35 @@ GLint LoadProgram(Types ... args)
     return ProgramID;
 }
 
+class GPUTimer;
+
+class ScopedGPUTimer
+{
+public:
+    ScopedGPUTimer(GPUTimer &);
+    ~ScopedGPUTimer();
+};
+
+class GPUTimer
+{
+    friend class ScopedGPUTimer;
+    GLuint query;
+    bool initialised;
+public:
+    GPUTimer();
+    unsigned elapsedTimeus();
+};
+
 // core::rect<s32> needs these includes
 #include <rect.h>
 #include "utils/vec3.hpp"
 
 GLuint getTextureGLuint(irr::video::ITexture *tex);
 GLuint getDepthTexture(irr::video::ITexture *tex);
+void resetTextureTable();
 void compressTexture(irr::video::ITexture *tex, bool srgb);
+bool loadCompressedTexture(const std::string& compressed_tex);
+void saveCompressedTexture(const std::string& compressed_tex);
 void blitFBO(GLuint Src, GLuint Dst, size_t width, size_t height);
 
 void draw2DImage(const irr::video::ITexture* texture, const irr::core::rect<s32>& destRect,

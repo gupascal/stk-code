@@ -92,6 +92,7 @@ class IrrDriver : public IEventReceiver, public NoCopy
 {
 private:
     int GLMajorVersion, GLMinorVersion;
+    bool hasVSLayer;
     /** The irrlicht device. */
     IrrlichtDevice             *m_device;
     /** Irrlicht scene manager. */
@@ -133,6 +134,8 @@ private:
     float greenSHCoeff[9];
     float redSHCoeff[9];
 
+    /** Keep a trace of the origin file name of a texture. */
+    std::map<video::ITexture*, std::string> m_texturesFileName;
 
     /** Flag to indicate if a resolution change is pending (which will be
      *  acted upon in the next update). None means no change, yes means
@@ -169,6 +172,11 @@ public:
             return 100 + (GLMinorVersion + 3) * 10;
         else
             return 120;
+    }
+
+    bool hasVSLayerExtension() const
+    {
+        return hasVSLayer;
     }
 
     float getExposure() const
@@ -220,7 +228,6 @@ private:
     unsigned             object_count[PASS_COUNT];
     u32                  m_renderpass;
     u32                  m_lensflare_query;
-    u32                  m_perf_query[Q_LAST];
     bool                 m_query_issued;
     class STKMeshSceneNode *m_sun_interposer;
     scene::CLensFlareSceneNode *m_lensflare;
@@ -259,22 +266,13 @@ private:
     void renderSolidSecondPass();
     void renderTransparent();
     void renderParticles();
-    void computeCameraMatrix(scene::ICameraSceneNode * const camnode,
-        Camera * const camera);
-    void renderShadows(//ShadowImportanceProvider * const sicb,
-                       scene::ICameraSceneNode * const camnode,
-                       //video::SOverrideMaterial &overridemat,
-                       Camera * const camera);
-    void renderGlow(video::SOverrideMaterial &overridemat,
-                    std::vector<GlowData>& glows,
-                    const core::aabbox3df& cambox,
-                    int cam);
-    void renderLights(const core::aabbox3df& cambox,
-                      scene::ICameraSceneNode * const camnode,
-                      video::SOverrideMaterial &overridemat,
-                      int cam, float dt);
-    void renderDisplacement(video::SOverrideMaterial &overridemat,
-                            int cam);
+    void computeSunVisibility();
+    void renderScene(scene::ICameraSceneNode * const camnode, std::vector<GlowData>& glows, float dt, bool hasShadows);
+    void computeCameraMatrix(scene::ICameraSceneNode * const camnode);
+    void renderShadows();
+    void renderGlow(std::vector<GlowData>& glows);
+    void renderLights(float dt);
+    void renderDisplacement();
     void doScreenShot();
 public:
          IrrDriver();
@@ -282,7 +280,7 @@ public:
     void initDevice();
     void reset();
     void generateSkyboxCubemap();
-    void renderSkybox();
+    void renderSkybox(const scene::ICameraSceneNode *camera);
     void setPhase(STKRenderingPass);
     STKRenderingPass getPhase() const;
     const std::vector<core::matrix4> &getShadowViewProj() const
@@ -300,6 +298,8 @@ public:
     void displayFPS();
     bool                  OnEvent(const irr::SEvent &event);
     void                  setAmbientLight(const video::SColor &light);
+    std::string           generateSmallerTextures(const std::string& dir);
+    std::string           getSmallerTexture(const std::string& texture);
     video::ITexture      *getTexture(FileManager::AssetType type,
                                      const std::string &filename,
                                      bool is_premul=false,
@@ -309,6 +309,8 @@ public:
                                      bool is_premul=false,
                                      bool is_prediv=false,
                                      bool complain_if_not_found=true);
+    void                  clearTexturesFileName();
+    std::string           getTextureName(video::ITexture* tex);
     void                  grabAllTextures(const scene::IMesh *mesh);
     void                  dropAllTextures(const scene::IMesh *mesh);
     scene::IMesh         *createQuadMesh(const video::SMaterial *material=NULL,
@@ -368,6 +370,7 @@ public:
     void                  setTextureErrorMessage(const std::string &error,
                                                  const std::string &detail="");
     void                  unsetTextureErrorMessage();
+    class GPUTimer        &getGPUTimer(unsigned);
 
     void draw2dTriangle(const core::vector2df &a, const core::vector2df &b,
                         const core::vector2df &c,
