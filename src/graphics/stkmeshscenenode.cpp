@@ -182,8 +182,13 @@ void STKMeshSceneNode::drawTransparent(const GLMesh &mesh, video::E_MATERIAL_TYP
 
     ModelViewProjectionMatrix = computeMVP(AbsoluteTransformation);
 
+    core::matrix4 ModelViewMatrix = irr_driver->getViewMatrix();
+    ModelViewMatrix *= AbsoluteTransformation;
+
     if (type == irr_driver->getShader(ES_BUBBLES))
         drawBubble(mesh, ModelViewProjectionMatrix);
+    else if (type == irr_driver->getShader(ES_WATER))
+        drawWater(mesh, ModelViewProjectionMatrix, ModelViewMatrix, TransposeInverseModelView);
 //    else if (World::getWorld()->getTrack()->isFogEnabled())
 //        drawTransparentFogObject(mesh, ModelViewProjectionMatrix, TextureMatrix);
     else
@@ -500,6 +505,13 @@ void STKMeshSceneNode::render()
             glUseProgram(MeshShader::BubbleShader::Program);
         for_in(mesh, TransparentMesh[TM_BUBBLE])
             drawBubble(*mesh, ModelViewProjectionMatrix);
+
+        core::matrix4 ModelViewMatrix = irr_driver->getViewMatrix();
+        ModelViewMatrix *= AbsoluteTransformation;
+        if (!TransparentMesh[TM_WATER].empty())
+            glUseProgram(MeshShader::WaterShader::Program);
+        for_in(mesh, TransparentMesh[TM_WATER])
+            drawWater(*mesh, ModelViewProjectionMatrix, ModelViewMatrix, TransposeInverseModelView);
 
         if (World::getWorld() ->isFogEnabled())
         {

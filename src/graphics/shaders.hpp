@@ -425,6 +425,18 @@ public:
     static void setUniforms(const core::matrix4 &ModelMatrix, const core::vector2df &screen, unsigned TU_tex);
 };
 
+class WaterShader
+{
+public:
+    static GLuint Program;
+    static GLuint attrib_position, attrib_texcoord, attrib_normal;
+    static GLuint uniform_MVP, uniform_MV, uniform_TIMV, uniform_time, uniform_BumpTex1, uniform_BumpTex2, uniform_DecalTex;
+
+    static void init();
+    static void setUniforms(const core::matrix4 &ModelViewProjectionMatrix, const core::matrix4 &ModelViewMatrix,
+        const core::matrix4 &TransposeInverseModelView, float time, unsigned TU_BumpTex1, unsigned TU_BumpTex2, unsigned TU_DecalTex);
+};
+
 }
 
 #define MAXLIGHT 32

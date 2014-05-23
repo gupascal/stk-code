@@ -359,6 +359,7 @@ void Shaders::loadShaders()
     MeshShader::InstancedRefShadowShader::init();
     MeshShader::GrassShadowShader::init();
     MeshShader::SkyboxShader::init();
+    MeshShader::WaterShader::init();
     ParticleShader::FlipParticleRender::init();
     ParticleShader::HeightmapSimulationShader::init();
     ParticleShader::SimpleParticleRender::init();
@@ -1818,6 +1819,47 @@ namespace MeshShader
         glUniformMatrix4fv(uniform_MM, 1, GL_FALSE, ModelMatrix.pointer());
         glUniform1i(uniform_tex, TU_tex);
         glUniform2f(uniform_screen, screen.X, screen.Y);
+    }
+
+    GLuint WaterShader::Program;
+    GLuint WaterShader::attrib_position;
+    GLuint WaterShader::attrib_texcoord;
+    GLuint WaterShader::attrib_normal;
+    GLuint WaterShader::uniform_MVP;
+    GLuint WaterShader::uniform_MV;
+    GLuint WaterShader::uniform_TIMV;
+    GLuint WaterShader::uniform_time;
+    GLuint WaterShader::uniform_BumpTex1;
+    GLuint WaterShader::uniform_BumpTex2;
+    GLuint WaterShader::uniform_DecalTex;
+
+    void WaterShader::init()
+    {
+        Program = LoadProgram(
+            GL_VERTEX_SHADER, file_manager->getAsset("shaders/water.vert").c_str(),
+            GL_FRAGMENT_SHADER, file_manager->getAsset("shaders/water.frag").c_str());
+        attrib_position = glGetAttribLocation(Program, "Position");
+        attrib_texcoord = glGetAttribLocation(Program, "Texcoord");
+        attrib_normal = glGetAttribLocation(Program, "Normal");
+        uniform_MVP = glGetUniformLocation(Program, "ModelViewProjectionMatrix");
+        uniform_MV = glGetUniformLocation(Program, "ModelViewMatrix");
+        uniform_TIMV = glGetUniformLocation(Program, "TransposeInverseModelView");
+        uniform_time = glGetUniformLocation(Program, "time");
+        uniform_BumpTex1 = glGetUniformLocation(Program, "BumpTex1");
+        uniform_BumpTex2 = glGetUniformLocation(Program, "BumpTex2");
+        uniform_DecalTex = glGetUniformLocation(Program, "DecalTex");
+    }
+
+    void WaterShader::setUniforms(const core::matrix4 &ModelViewProjectionMatrix, const core::matrix4 &ModelViewMatrix,
+        const core::matrix4 &TransposeInverseModelView, float time, unsigned TU_BumpTex1, unsigned TU_BumpTex2, unsigned TU_DecalTex)
+    {
+        glUniformMatrix4fv(uniform_MVP, 1, GL_FALSE, ModelViewProjectionMatrix.pointer());
+        glUniformMatrix4fv(uniform_MV, 1, GL_FALSE, ModelViewMatrix.pointer());
+        glUniformMatrix4fv(uniform_TIMV, 1, GL_FALSE, TransposeInverseModelView.pointer());
+        glUniform1f(uniform_time, time);
+        glUniform1i(uniform_BumpTex1, TU_BumpTex1);
+        glUniform1i(uniform_BumpTex2, TU_BumpTex2);
+        glUniform1i(uniform_DecalTex, TU_DecalTex);
     }
 }
 

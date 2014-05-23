@@ -49,6 +49,8 @@ TransparentMaterial MaterialTypeToTransparentMaterial(video::E_MATERIAL_TYPE typ
 {
     if (type == irr_driver->getShader(ES_BUBBLES))
         return TM_BUBBLE;
+    if (type == irr_driver->getShader(ES_WATER))
+        return TM_WATER;
     video::E_BLEND_FACTOR srcFact, DstFact;
     video::E_MODULATE_FUNC mod;
     u32 alpha;
@@ -697,6 +699,36 @@ void drawBubble(const GLMesh &mesh, const core::matrix4 &ModelViewProjectionMatr
 	glDrawElements(ptype, count, itype, 0);
 }
 
+void drawWater(const GLMesh &mesh, const core::matrix4 &ModelViewProjectionMatrix, const core::matrix4 &ModelViewMatrix,
+               const core::matrix4 &TransposeInverseModelView)
+{
+    irr_driver->IncreaseObjectCount();
+    GLenum ptype = mesh.PrimitiveType;
+    GLenum itype = mesh.IndexType;
+    size_t count = mesh.IndexCount;
+
+    const float time = irr_driver->getDevice()->getTimer()->getTime() / 1000.0f;
+
+    irr::video::ITexture* wnTex = irr_driver->getTexture(file_manager->getAsset("textures/waternormals.jpg").c_str());
+    compressTexture(wnTex, false);
+    //setTexture(MeshShader::WaterShader::uniform_BumpTex1, getTextureGLuint(wnTex), GL_LINEAR, GL_LINEAR_MIPMAP_LINEAR, true);
+
+    irr::video::ITexture* wn2Tex = irr_driver->getTexture(file_manager->getAsset("textures/waternormals2.jpg").c_str());
+    compressTexture(wn2Tex, false);
+    //setTexture(MeshShader::WaterShader::uniform_BumpTex2, getTextureGLuint(wn2Tex), GL_LINEAR, GL_LINEAR_MIPMAP_LINEAR, true);
+
+    compressTexture(mesh.textures[0], true);
+    setTexture(0, getTextureGLuint(mesh.textures[0]), GL_LINEAR, GL_LINEAR_MIPMAP_LINEAR, true);
+
+    //glUseProgram(MeshShader::WaterShader::Program);
+    MeshShader::WaterShader::setUniforms(ModelViewProjectionMatrix, ModelViewMatrix, TransposeInverseModelView, time,
+        getTextureGLuint(wnTex), getTextureGLuint(wn2Tex), getTextureGLuint(mesh.textures[0]));
+
+    assert(mesh.vao_first_pass);
+    glBindVertexArray(mesh.vao_first_pass);
+    glDrawElements(ptype, count, itype, 0);
+}
+
 void drawShadowRef(const GLMesh &mesh, const core::matrix4 &ModelMatrix)
 {
     irr_driver->IncreaseObjectCount();
@@ -750,6 +782,8 @@ bool isObject(video::E_MATERIAL_TYPE type)
 	if (type == irr_driver->getShader(ES_OBJECT_UNLIT))
 		return true;
     if (type == irr_driver->getShader(ES_CAUSTICS))
+        return true;
+    if (type == irr_driver->getShader(ES_WATER))
         return true;
 	if (type == video::EMT_TRANSPARENT_ALPHA_CHANNEL)
 		return true;
@@ -855,6 +889,10 @@ void initvaostate(GLMesh &mesh, TransparentMaterial TranspMat)
     case TM_BUBBLE:
         mesh.vao_first_pass = createVAO(mesh.vertex_buffer, mesh.index_buffer,
             MeshShader::BubbleShader::attrib_position, MeshShader::BubbleShader::attrib_texcoord, -1, -1, -1, -1, -1, mesh.Stride);
+        break;
+    case TM_WATER:
+        mesh.vao_first_pass = createVAO(mesh.vertex_buffer, mesh.index_buffer,
+            MeshShader::WaterShader::attrib_position, MeshShader::WaterShader::attrib_texcoord, -1, MeshShader::WaterShader::attrib_normal, -1, -1, -1, mesh.Stride);
         break;
     case TM_DEFAULT:
     case TM_ADDITIVE:

@@ -37,6 +37,7 @@ enum TransparentMaterial
     TM_DEFAULT,
     TM_ADDITIVE,
     TM_BUBBLE,
+    TM_WATER,
     TM_COUNT
 };
 
@@ -137,6 +138,7 @@ void drawShadow(const GLMesh &mesh, const core::matrix4 &ModelMatrix);
 void drawTransparentObject(const GLMesh &mesh, const core::matrix4 &ModelViewProjectionMatrix, const core::matrix4 &TextureMatrix);
 void drawTransparentFogObject(const GLMesh &mesh, const core::matrix4 &ModelViewProjectionMatrix, const core::matrix4 &TextureMatrix);
 void drawBubble(const GLMesh &mesh, const core::matrix4 &ModelViewProjectionMatrix);
+void drawWater(const GLMesh &mesh, const core::matrix4 &ModelViewProjectionMatrix, const core::matrix4 &ModelViewMatrix, const core::matrix4 &TransposeInverseModelView);
 
 GeometricMaterial MaterialTypeToGeometricMaterial(video::E_MATERIAL_TYPE);
 ShadedMaterial MaterialTypeToShadedMaterial(video::E_MATERIAL_TYPE, irr::video::ITexture **textures);
