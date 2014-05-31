@@ -31,7 +31,6 @@
 #include "graphics/post_processing.hpp"
 #include "graphics/referee.hpp"
 #include "graphics/shaders.hpp"
-#include "graphics/shadow_importance.hpp"
 #include "graphics/stkanimatedmesh.hpp"
 #include "graphics/stkbillboard.hpp"
 #include "graphics/stkmeshscenenode.hpp"
@@ -111,7 +110,8 @@ IrrDriver::IrrDriver()
     m_post_processing     = NULL;
     m_wind                = new Wind();
     m_mipviz = m_wireframe = m_normals = m_ssaoviz = \
-        m_lightviz = m_shadowviz = m_distortviz = 0;
+        m_lightviz = m_shadowviz = m_distortviz = m_rsm = m_rh = m_gi = 0;
+    SkyboxCubeMap = 0;
 }   // IrrDriver
 
 // ----------------------------------------------------------------------------
@@ -436,16 +436,24 @@ void IrrDriver::initDevice()
 
     GLMajorVersion = 2;
     GLMinorVersion = 1;
-    glGetIntegerv(GL_MAJOR_VERSION, &GLMajorVersion);
-    glGetIntegerv(GL_MINOR_VERSION, &GLMinorVersion);
+    // Call to glGetIntegerv should not be made if --no-graphics is used
+    if(!ProfileWorld::isNoGraphics())
+    {
+        glGetIntegerv(GL_MAJOR_VERSION, &GLMajorVersion);
+        glGetIntegerv(GL_MINOR_VERSION, &GLMinorVersion);
+    }
     Log::info("IrrDriver", "OPENGL VERSION IS %d.%d", GLMajorVersion, GLMinorVersion);
     m_glsl = (GLMajorVersion > 3 || (GLMajorVersion == 3 && GLMinorVersion >= 1));
 
     // Parse extensions
     hasVSLayer = false;
-    const GLubyte *extensions = glGetString(GL_EXTENSIONS);
-    if (extensions && strstr((const char*)extensions, "GL_AMD_vertex_shader_layer") != NULL)
+    // Default false value for hasVSLayer if --no-graphics argument is used
+    if (!ProfileWorld::isNoGraphics())
+    {
+        const GLubyte *extensions = glGetString(GL_EXTENSIONS);
+        if (extensions && strstr((const char*)extensions, "GL_AMD_vertex_shader_layer") != NULL)
         hasVSLayer = true;
+    }
 
 
 
@@ -463,15 +471,11 @@ void IrrDriver::initDevice()
     if (m_glsl)
     {
         Log::info("irr_driver", "GLSL supported.");
-
-        // Order matters, create RTTs as soon as possible, as they are the largest blocks.
-        m_rtts = new RTT();
     }
     // m_glsl might be reset in rtt if an error occurs.
     if(m_glsl)
     {
         m_shaders = new Shaders();
-        m_shadow_importance = new ShadowImportance();
 
         m_mrt.clear();
         m_mrt.reallocate(2);
@@ -1201,7 +1205,7 @@ void IrrDriver::suppressSkyBox()
 {
     SkyboxTextures.clear();
     SphericalHarmonicsTextures.clear();
-    if (SkyboxCubeMap)
+    if ((SkyboxCubeMap) && (!ProfileWorld::isNoGraphics()))
         glDeleteTextures(1, &SkyboxCubeMap);
     SkyboxCubeMap = 0;
 }
@@ -1551,7 +1555,22 @@ video::ITexture* IrrDriver::applyMask(video::ITexture* texture,
     mask->drop();
     return t;
 }   // applyMask
-
+// ----------------------------------------------------------------------------
+void IrrDriver::onLoadWorld()
+{
+    if (m_glsl)
+    {
+        const core::recti &viewport = Camera::getCamera(0)->getViewport();
+        size_t width = viewport.LowerRightCorner.X - viewport.UpperLeftCorner.X, height = viewport.LowerRightCorner.Y - viewport.UpperLeftCorner.Y;
+        m_rtts = new RTT(width, height);
+    }
+}
+// ----------------------------------------------------------------------------
+void IrrDriver::onUnloadWorld()
+{
+    delete m_rtts;
+    m_rtts = NULL;
+}
 // ----------------------------------------------------------------------------
 /** Sets the ambient light.
  *  \param light The colour of the light to set.
@@ -2361,4 +2380,25 @@ void IrrDriver::clearLights()
     }
 
     m_lights.clear();
+}
+
+// ----------------------------------------------------------------------------
+
+GLuint IrrDriver::getRenderTargetTexture(TypeRTT which)
+{
+    return m_rtts->getRenderTarget(which);
+}
+
+// ----------------------------------------------------------------------------
+
+FrameBuffer& IrrDriver::getFBO(TypeFBO which) 
+{
+    return m_rtts->getFBO(which);
+}
+
+// ----------------------------------------------------------------------------
+
+GLuint IrrDriver::getDepthStencilTexture()
+{
+    return m_rtts->getDepthStencilTexture();
 }
