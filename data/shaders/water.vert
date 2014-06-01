@@ -10,8 +10,8 @@ uniform float time;
 
 // Future uniform variables
 const float speed = 2.0;
-const float height = 0.75;
-const float waveLength = 2.0;
+const float height = 0.55;
+const float waveLength = 1.5;
 
 const vec3 lightdir = vec3(1.0, 1.0, 0.0);
 
